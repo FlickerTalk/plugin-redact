@@ -40,16 +40,20 @@ export function outName(name) {
 const CELL = 0.035;
 
 const STYLE = `
-:host { display: block; font: 14px system-ui, sans-serif; color: #111; }
-@media (prefers-color-scheme: dark) { :host { color: #f4f4f4; } }
+:host { display: block; font: 14px system-ui, sans-serif; color: #111; --paper: #fff; }
+@media (prefers-color-scheme: dark) { :host { color: #f4f4f4; --paper: #111; } }
 .bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 4px 0 10px; }
 button {
   appearance: none; border: 1px solid currentColor; background: transparent; color: inherit;
   border-radius: 10px; min-width: 44px; height: 40px; font-size: 18px; cursor: pointer; opacity: .75;
 }
 button:disabled { opacity: .25; }
+.i {
+  display: block; width: 22px; height: 22px; margin: auto; background: currentColor;
+  -webkit-mask: var(--i) center/contain no-repeat; mask: var(--i) center/contain no-repeat;
+}
 button.on { opacity: 1; background: currentColor; }
-button.on > span { filter: invert(1); }
+button.on .i { background: var(--paper); }
 .grow { flex: 1; }
 .note { font-size: 12px; opacity: .6; }
 .stage { position: relative; display: grid; place-items: center; min-height: 160px; }
@@ -71,12 +75,12 @@ class Redact extends HTMLElement {
     this.root.innerHTML = `
       <style>${STYLE}</style>
       <div class="bar">
-        <button data-act="pick" aria-label="Pick a picture"><span>🖼️</span></button>
-        <button data-act="solid" aria-label="Paint it black" disabled><span>⬛</span></button>
-        <button data-act="mosaic" aria-label="Make it a mosaic" disabled><span>🔳</span></button>
-        <button data-act="undo" aria-label="Start again" disabled><span>↩️</span></button>
+        <button data-act="pick" aria-label="Pick a picture"><i class="i" style="--i:url(./icon/image-outline.svg)"></i></button>
+        <button data-act="solid" aria-label="Paint it black" disabled><i class="i" style="--i:url(./icon/square-outline.svg)"></i></button>
+        <button data-act="mosaic" aria-label="Make it a mosaic" disabled><i class="i" style="--i:url(./icon/grid-outline.svg)"></i></button>
+        <button data-act="undo" aria-label="Start again" disabled><i class="i" style="--i:url(./icon/arrow-undo-outline.svg)"></i></button>
         <span class="grow"></span>
-        <button data-act="send" aria-label="Send it" disabled><span>➤</span></button>
+        <button data-act="send" aria-label="Send it" disabled><i class="i" style="--i:url(./icon/send-outline.svg)"></i></button>
       </div>
       <div class="stage"><canvas></canvas><div class="box" hidden></div></div>
       <p class="note" hidden></p>
@@ -110,7 +114,7 @@ class Redact extends HTMLElement {
     image.src = `data:${picked.mime || "image/jpeg"};base64,${picked.data}`;
     await image.decode().catch(() => {});
     if (!image.naturalWidth) {
-      this.say("😕");
+      this.say("That picture cannot be read");
       return;
     }
     this.source = image;
@@ -216,7 +220,7 @@ class Redact extends HTMLElement {
     this.canvas.width = Math.max(1, Math.round(this.base.width * scale));
     this.canvas.height = Math.max(1, Math.round(this.base.height * scale));
     this.canvas.getContext("2d")?.drawImage(this.base, 0, 0, this.canvas.width, this.canvas.height);
-    this.say(this.covered ? `${this.covered} ⬛ · 🚫📍` : "👆");
+    this.say(this.covered ? `${this.covered} covered · no EXIF` : "Drag over what should not be seen");
   }
 
   send() {
@@ -237,3 +241,11 @@ class Redact extends HTMLElement {
 }
 
 customElements.define("ft-redact", Redact);
+
+/** An icon the app lends (`./icon/<name>.svg`): painted in the colour of the app, not a picture. */
+function drawIcon(name) {
+  const made = document.createElement("i");
+  made.className = "i";
+  made.style.setProperty("--i", `url(./icon/${name}.svg)`);
+  return made;
+}
