@@ -1,11 +1,93 @@
 {
   "id": "com.flickertalk.redact",
   "name": "Cover",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "minCoreVersion": "0.1.0",
   "components": [
     "ft-redact"
   ],
   "permissions": {},
-  "summary": "Cover a face, a name or a number in a picture: black or mosaic, in the pixels."
+  "summary": "Cover a face, a name or a number in a picture: black or mosaic, in the pixels.",
+  "locales": {
+    "es": {
+      "name": "Tapar",
+      "summary": "Tapa una cara, un nombre o un número en una imagen: en negro o en mosaico, en los propios píxeles."
+    },
+    "pt": {
+      "name": "Tapar",
+      "summary": "Tape um rosto, um nome ou um número numa imagem: a preto ou em mosaico, nos próprios pixels."
+    },
+    "fr": {
+      "name": "Masquer",
+      "summary": "Masquez un visage, un nom ou un numéro sur une image : en noir ou en mosaïque, dans les pixels mêmes."
+    },
+    "de": {
+      "name": "Abdecken",
+      "summary": "Deck ein Gesicht, einen Namen oder eine Nummer in einem Bild ab: schwarz oder als Mosaik, direkt in den Pixeln."
+    },
+    "it": {
+      "name": "Copri",
+      "summary": "Copri un volto, un nome o un numero in un’immagine: in nero o a mosaico, nei pixel stessi."
+    },
+    "ro": {
+      "name": "Acoperă",
+      "summary": "Acoperă o față, un nume sau un număr dintr-o imagine: cu negru sau mozaic, chiar în pixeli."
+    },
+    "ru": {
+      "name": "Скрыть",
+      "summary": "Скройте лицо, имя или номер на изображении: чёрным или мозаикой, прямо в пикселях."
+    },
+    "uk": {
+      "name": "Приховати",
+      "summary": "Приховайте обличчя, ім’я чи номер на зображенні: чорним або мозаїкою, прямо в пікселях."
+    },
+    "pl": {
+      "name": "Zasłoń",
+      "summary": "Zasłoń twarz, imię lub numer na obrazie: na czarno lub mozaiką, w samych pikselach."
+    },
+    "tr": {
+      "name": "Gizle",
+      "summary": "Bir görseldeki yüzü, ismi ya da numarayı gizle: siyahla ya da mozaikle, doğrudan piksellerde."
+    },
+    "ar": {
+      "name": "إخفاء",
+      "summary": "أخفِ وجهًا أو اسمًا أو رقمًا في صورة: بالأسود أو بالفسيفساء، في البكسلات نفسها."
+    },
+    "hi": {
+      "name": "ढकना",
+      "summary": "किसी तस्वीर में चेहरा, नाम या नंबर ढकें: काले रंग या मोज़ेक से, सीधे पिक्सेल में।"
+    },
+    "bn": {
+      "name": "আড়াল",
+      "summary": "ছবিতে কোনো মুখ, নাম বা নম্বর আড়াল করুন: কালো রঙে বা মোজাইকে, সরাসরি পিক্সেলে।"
+    },
+    "id": {
+      "name": "Tutupi",
+      "summary": "Tutupi wajah, nama, atau nomor di gambar: hitam atau mosaik, langsung di pikselnya."
+    },
+    "vi": {
+      "name": "Che phủ",
+      "summary": "Che phủ khuôn mặt, tên hoặc số trong ảnh: bằng màu đen hoặc hiệu ứng khảm, ngay trong các điểm ảnh."
+    },
+    "th": {
+      "name": "ปิดบัง",
+      "summary": "ปิดบังใบหน้า ชื่อ หรือหมายเลขในรูปภาพ: ด้วยสีดำหรือโมเสก ลงในพิกเซลเลย"
+    },
+    "ja": {
+      "name": "隠す",
+      "summary": "画像の顔・名前・番号を、黒塗りかモザイクで隠します。ピクセル自体に反映されます。"
+    },
+    "ko": {
+      "name": "가리기",
+      "summary": "사진 속 얼굴, 이름, 번호를 검은색이나 모자이크로 가립니다. 픽셀 자체에 적용됩니다."
+    },
+    "zh-CN": {
+      "name": "遮挡",
+      "summary": "遮挡图片中的人脸、名字或号码：黑块或马赛克，直接作用于像素。"
+    },
+    "zh-TW": {
+      "name": "遮擋",
+      "summary": "遮擋圖片中的人臉、名字或號碼：黑塊或馬賽克，直接作用於像素。"
+    }
+  }
 }
