@@ -1,5 +1,7 @@
 // The plugin's own tests (Plan §53): what is covered is covered in the pixels themselves, so the
 // picture that leaves the phone no longer holds what was underneath.
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { blocksOf, normalRect, outName } from "./dist/index.js";
 import source from "./dist/index.js?raw";
@@ -67,5 +69,20 @@ describe("cover", () => {
 
   it("is a custom element the frame can show", () => {
     expect(customElements.get("ft-redact")).toBeTruthy();
+  });
+});
+
+describe("the image of the Apps grid", () => {
+  // icon.svg beside module.json and dist/, signed with the rest: the app draws it on the tile; the
+  // Ionicon in module.json stays as the fallback (2026-10-08).
+  const image = join(import.meta.dirname, "icon.svg");
+
+  it("is a square 64 × 64 SVG of at most 4 KB at the root of the package, and not inside dist/", () => {
+    expect(existsSync(image), "icon.svg").toBe(true);
+    expect(statSync(image).size).toBeLessThanOrEqual(4096);
+    const svg = readFileSync(image, "utf8");
+    expect(svg.startsWith("<svg")).toBe(true);
+    expect(svg).toContain('viewBox="0 0 64 64"');
+    expect(existsSync(join(import.meta.dirname, "dist", "icon.svg"))).toBe(false);
   });
 });
