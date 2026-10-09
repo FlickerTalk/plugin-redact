@@ -1,8 +1,8 @@
 // The plugin's own tests (Plan §53): what is covered is covered in the pixels themselves, so the
 // picture that leaves the phone no longer holds what was underneath.
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { blocksOf, normalRect, outName } from "./dist/index.js";
 import source from "./dist/index.js?raw";
 import manifest from "./module.json";
@@ -69,6 +69,102 @@ describe("cover", () => {
 
   it("is a custom element the frame can show", () => {
     expect(customElements.get("ft-redact")).toBeTruthy();
+  });
+});
+
+describe("with the Ionic the app lends", () => {
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+  // Ionic moves a button's aria attributes to the native button inside it once it has drawn.
+  const aria = (button, name) => button.getAttribute(name) ?? button.shadowRoot?.querySelector("button")?.getAttribute(name);
+  let asked = 0;
+  const mount = async () => {
+    asked = 0;
+    globalThis.ft = { onOpen() {}, pickFile: async () => ((asked += 1), null) };
+    document.body.innerHTML = "";
+    const element = document.createElement("ft-redact");
+    document.body.append(element);
+    await tick();
+    return element;
+  };
+
+  afterEach(() => {
+    delete globalThis.Ionicons;
+    delete globalThis.ft;
+  });
+
+  // Only an app that lends Ionic can show it (app 1.6.0): an older one keeps the version it has.
+  it("asks for an app that lends Ionic", () => {
+    expect(manifest.minCoreVersion).toBe("1.6.0");
+  });
+
+  it("draws in the page, not in a shadow root, so Ionic's own styles reach it", async () => {
+    const element = await mount();
+    expect(element.shadowRoot).toBe(null);
+    expect(element.querySelector(":scope > ion-header > ion-toolbar")).toBeTruthy();
+    expect(element.querySelector(":scope > ion-content .stage canvas")).toBeTruthy();
+    expect(element.querySelector(":scope > ion-content .note")).toBeTruthy();
+  });
+
+  it("has every action as an Ionic button in its toolbar, each with a label", async () => {
+    const element = await mount();
+    const acts = [...element.querySelectorAll("ion-toolbar ion-button")].map((button) => button.dataset.act);
+    expect(acts).toEqual(["pick", "solid", "mosaic", "undo", "send"]);
+    for (const button of element.querySelectorAll("ion-toolbar ion-button")) expect(aria(button, "aria-label"), button.dataset.act).toBeTruthy();
+    expect(element.querySelector("button")).toBe(null);
+  });
+
+  it("can do nothing but pick a picture until there is one, and asks the app for it", async () => {
+    const element = await mount();
+    const button = (act) => element.querySelector(`ion-button[data-act="${act}"]`);
+    expect(button("pick").disabled).toBe(false);
+    for (const act of ["solid", "mosaic", "undo", "send"]) expect(button(act).disabled, act).toBe(true);
+    button("pick").click();
+    await tick();
+    expect(asked).toBe(1);
+  });
+
+  it("shows which way it covers as the pressed one of two buttons", async () => {
+    const element = await mount();
+    const button = (act) => element.querySelector(`ion-button[data-act="${act}"]`);
+    const pressed = () => ["solid", "mosaic"].filter((act) => aria(button(act), "aria-pressed") === "true");
+    expect(pressed()).toEqual(["solid"]);
+    expect(button("solid").fill).toBe("solid");
+    element.pick(false);
+    await tick();
+    expect(pressed()).toEqual(["mosaic"]);
+    expect(button("mosaic").fill).toBe("solid");
+    expect(button("solid").fill).toBe(undefined);
+  });
+
+  // The icons are the app's: Ionic's own when the app lent them by name, else the ones it serves.
+  it("draws an Ionicon the app lent by name with ion-icon, and the one it serves otherwise", async () => {
+    let element = await mount();
+    expect(element.querySelector('[data-act="pick"] ion-icon')).toBe(null);
+    expect(element.querySelector('[data-act="pick"] [slot="icon-only"]').getAttribute("style")).toContain("./icon/image-outline.svg");
+
+    globalThis.Ionicons = { map: new Map([["image-outline", "data:image/svg+xml;utf8,<svg></svg>"]]) };
+    element = await mount();
+    expect(element.querySelector('[data-act="pick"] ion-icon[slot="icon-only"]').getAttribute("name")).toBe("image-outline");
+  });
+});
+
+describe("the package", () => {
+  const dist = join(import.meta.dirname, "dist");
+  const files = readdirSync(dist);
+
+  // Ionic is the app's, lent to the frame: a copy in the package would be a second one, and heavy.
+  it("carries no Ionic of its own", () => {
+    for (const file of files) {
+      const code = readFileSync(join(dist, file), "utf8");
+      expect(code, file).not.toMatch(/@ionic\/core|ionicframework|stencil|defineCustomElement|__registerHost/i);
+      expect(code, file).not.toMatch(/^\s*import\s.*from\s+["'](?!\.\/)/m);
+    }
+  });
+
+  // The app carries it as a seed on iOS: 128 KiB at most (plugin-sdk).
+  it("is small enough to be a seed", () => {
+    const bytes = files.reduce((sum, file) => sum + statSync(join(dist, file)).size, 0);
+    expect(bytes).toBeLessThanOrEqual(128 * 1024);
   });
 });
 
