@@ -1,0 +1,170 @@
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { blocksOf, normalRect, outName } from "./dist/index.js";
+import source from "./dist/index.js?raw";
+import manifest from "./module.json";
+
+const languages = ["es", "pt", "fr", "de", "it", "ro", "ru", "uk", "pl", "tr", "ar", "hi", "bn", "id", "vi", "th", "ja", "ko", "zh-CN", "zh-TW"];
+
+const length = (text) => [...text].length;
+
+describe("manifest", () => {
+  it("names and sums itself up in every language of the app", () => {
+    expect(Object.keys(manifest.locales ?? {})).toEqual(languages);
+    for (const code of languages) {
+      const { name, summary, ...rest } = manifest.locales[code];
+      expect(rest, code).toEqual({});
+      expect(name?.trim(), code).toBeTruthy();
+      expect(length(name), code).toBeLessThanOrEqual(64);
+      expect(summary?.trim(), code).toBeTruthy();
+      expect(length(summary), code).toBeLessThanOrEqual(200);
+    }
+  });
+
+  it("asks to write in the chat, since it puts its result there", () => {
+    expect(source).toMatch(/\bft\??\.(send|say)\(/);
+    expect(manifest.permissions.send).toBe("propose");
+  });
+});
+
+describe("cover", () => {
+  it("turns a drag into a box inside the picture", () => {
+    expect(normalRect({ x: 60, y: 80 }, { x: 20, y: 20 }, { width: 100, height: 100 })).toEqual({
+      x: 20,
+      y: 20,
+      width: 40,
+      height: 60,
+    });
+  });
+
+  it("ignores a tap that covers nothing", () => {
+    expect(normalRect({ x: 10, y: 10 }, { x: 12, y: 12 }, { width: 100, height: 100 })).toBe(null);
+  });
+
+  it("cuts a box into blocks that cover it whole", () => {
+    const blocks = blocksOf({ x: 0, y: 0, width: 20, height: 10 }, 8);
+    expect(blocks).toHaveLength(6);
+    expect(blocks[0]).toEqual({ x: 0, y: 0, width: 8, height: 8 });
+    const last = blocks[blocks.length - 1];
+    expect(last.x + last.width).toBe(20);
+    expect(last.y + last.height).toBe(10);
+  });
+
+  it("is one block when the box is smaller than one", () => {
+    expect(blocksOf({ x: 5, y: 5, width: 4, height: 4 }, 16)).toEqual([{ x: 5, y: 5, width: 4, height: 4 }]);
+  });
+
+  it("names what it made after what it was given", () => {
+    expect(outName("passport.png")).toBe("passport-covered.jpg");
+    expect(outName("")).toBe("image-covered.jpg");
+  });
+
+  it("is a custom element the frame can show", () => {
+    expect(customElements.get("ft-redact")).toBeTruthy();
+  });
+});
+
+describe("with the Ionic the app lends", () => {
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+  const aria = (button, name) => button.getAttribute(name) ?? button.shadowRoot?.querySelector("button")?.getAttribute(name);
+  let asked = 0;
+  const mount = async () => {
+    asked = 0;
+    globalThis.ft = { onOpen() {}, pickFile: async () => ((asked += 1), null) };
+    document.body.innerHTML = "";
+    const element = document.createElement("ft-redact");
+    document.body.append(element);
+    await tick();
+    return element;
+  };
+
+  afterEach(() => {
+    delete globalThis.Ionicons;
+    delete globalThis.ft;
+  });
+
+  it("asks for an app that lends Ionic", () => {
+    expect(manifest.minCoreVersion).toBe("1.6.0");
+  });
+
+  it("draws in the page, not in a shadow root, so Ionic's own styles reach it", async () => {
+    const element = await mount();
+    expect(element.shadowRoot).toBe(null);
+    expect(element.querySelector(":scope > ion-header > ion-toolbar")).toBeTruthy();
+    expect(element.querySelector(":scope > ion-content .stage canvas")).toBeTruthy();
+    expect(element.querySelector(":scope > ion-content .note")).toBeTruthy();
+  });
+
+  it("has every action as an Ionic button in its toolbar, each with a label", async () => {
+    const element = await mount();
+    const acts = [...element.querySelectorAll("ion-toolbar ion-button")].map((button) => button.dataset.act);
+    expect(acts).toEqual(["pick", "solid", "mosaic", "undo", "send"]);
+    for (const button of element.querySelectorAll("ion-toolbar ion-button")) expect(aria(button, "aria-label"), button.dataset.act).toBeTruthy();
+    expect(element.querySelector("button")).toBe(null);
+  });
+
+  it("can do nothing but pick a picture until there is one, and asks the app for it", async () => {
+    const element = await mount();
+    const button = (act) => element.querySelector(`ion-button[data-act="${act}"]`);
+    expect(button("pick").disabled).toBe(false);
+    for (const act of ["solid", "mosaic", "undo", "send"]) expect(button(act).disabled, act).toBe(true);
+    button("pick").click();
+    await tick();
+    expect(asked).toBe(1);
+  });
+
+  it("shows which way it covers as the pressed one of two buttons", async () => {
+    const element = await mount();
+    const button = (act) => element.querySelector(`ion-button[data-act="${act}"]`);
+    const pressed = () => ["solid", "mosaic"].filter((act) => aria(button(act), "aria-pressed") === "true");
+    expect(pressed()).toEqual(["solid"]);
+    expect(button("solid").fill).toBe("solid");
+    element.pick(false);
+    await tick();
+    expect(pressed()).toEqual(["mosaic"]);
+    expect(button("mosaic").fill).toBe("solid");
+    expect(button("solid").fill).toBe(undefined);
+  });
+
+  it("draws an Ionicon the app lent by name with ion-icon, and the one it serves otherwise", async () => {
+    let element = await mount();
+    expect(element.querySelector('[data-act="pick"] ion-icon')).toBe(null);
+    expect(element.querySelector('[data-act="pick"] [slot="icon-only"]').getAttribute("style")).toContain("./icon/image-outline.svg");
+
+    globalThis.Ionicons = { map: new Map([["image-outline", "data:image/svg+xml;utf8,<svg></svg>"]]) };
+    element = await mount();
+    expect(element.querySelector('[data-act="pick"] ion-icon[slot="icon-only"]').getAttribute("name")).toBe("image-outline");
+  });
+});
+
+describe("the package", () => {
+  const dist = join(import.meta.dirname, "dist");
+  const files = readdirSync(dist);
+
+  it("carries no Ionic of its own", () => {
+    for (const file of files) {
+      const code = readFileSync(join(dist, file), "utf8");
+      expect(code, file).not.toMatch(/@ionic\/core|ionicframework|stencil|defineCustomElement|__registerHost/i);
+      expect(code, file).not.toMatch(/^\s*import\s.*from\s+["'](?!\.\/)/m);
+    }
+  });
+
+  it("is small enough to be a seed", () => {
+    const bytes = files.reduce((sum, file) => sum + statSync(join(dist, file)).size, 0);
+    expect(bytes).toBeLessThanOrEqual(128 * 1024);
+  });
+});
+
+describe("the image of the Apps grid", () => {
+  const image = join(import.meta.dirname, "icon.svg");
+
+  it("is a square 64 × 64 SVG of at most 4 KB at the root of the package, and not inside dist/", () => {
+    expect(existsSync(image), "icon.svg").toBe(true);
+    expect(statSync(image).size).toBeLessThanOrEqual(4096);
+    const svg = readFileSync(image, "utf8");
+    expect(svg.startsWith("<svg")).toBe(true);
+    expect(svg).toContain('viewBox="0 0 64 64"');
+    expect(existsSync(join(import.meta.dirname, "dist", "icon.svg"))).toBe(false);
+  });
+});
